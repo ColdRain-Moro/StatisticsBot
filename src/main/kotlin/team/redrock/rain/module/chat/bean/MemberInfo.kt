@@ -1,4 +1,4 @@
-package team.redrock.rain.bean
+package team.redrock.rain.module.chat.bean
 
 import com.alibaba.excel.annotation.ExcelProperty
 
@@ -10,10 +10,12 @@ import com.alibaba.excel.annotation.ExcelProperty
  * @since 2023/3/2 上午11:12
  */
 data class MemberInfo(
-    @ExcelProperty("群名片")
+    @ExcelProperty("日期", "群名片")
     val nick: String,
-    @ExcelProperty("QQ号")
+    @ExcelProperty("日期", "QQ号")
     val id: Long,
-    @ExcelProperty("发言次数")
+    @ExcelProperty("日期", "发言次数")
     val count: Int
 )
+
+

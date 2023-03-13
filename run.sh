@@ -1,0 +1,1 @@
+docker run -itd -e QQ_NUMBER="3534390965" -e QQ_PASSWORD="ghy030608" -e TARGET_GROUP="835228088" -e SMTP_SERVER="smtp.qq.com" -e SMTP_PORT="465" -e EMAIL="1335014319@qq.com" -e EMAIL_PASSWORD="mawarirwqdnbbaag" -e EMAIL_SUBSCRIBER="2108372936@qq.com" --name statistics-bot arcticrain/statistics-bot

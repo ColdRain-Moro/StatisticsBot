@@ -19,6 +19,8 @@ dependencies {
     implementation("org.apache.commons:commons-email:1.5")
     implementation("com.alibaba:easyexcel:3.2.1")
     implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
+    implementation("com.squareup.okhttp3:okhttp:4.10.0")
+    implementation("com.google.code.gson:gson:2.10.1")
 
     testImplementation(kotlin("test"))
 }
