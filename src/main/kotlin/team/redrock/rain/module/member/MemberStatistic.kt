@@ -2,8 +2,6 @@ package team.redrock.rain.module.member
 
 import com.alibaba.excel.EasyExcel
 import com.alibaba.excel.annotation.ExcelProperty
-import com.alibaba.excel.context.AnalysisContext
-import com.alibaba.excel.read.listener.ReadListener
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.Dispatchers
@@ -16,10 +14,10 @@ import okhttp3.*
 import org.apache.commons.mail.DefaultAuthenticator
 import org.apache.commons.mail.EmailAttachment
 import org.apache.commons.mail.MultiPartEmail
+import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import team.redrock.rain.*
 import java.io.File
 import java.io.IOException
-import java.io.InputStream
 import java.nio.file.Paths
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,14 +32,43 @@ import kotlin.coroutines.suspendCoroutine
  * @author 寒雨
  * @since 2023/3/7 下午1:13
  */
-data class StudentInfo(
-    @ExcelProperty("姓名")
-    val name: String,
+class StudentInfo {
     @ExcelProperty("学号")
-    val stuId: Long,
+    var stuId: Long? = null
+    @ExcelProperty("姓名")
+    var name: String? = null
+    @ExcelProperty("性别")
+    var gender: String? = null
+    @ExcelProperty("学院")
+    var department: String? = null
+    @ExcelProperty("专业")
+    var major: String? = null
+    @ExcelProperty("年级")
+    var grade: Int? = null
+    @ExcelProperty("行政班班号")
+    var classId: Int? = null
     @ExcelProperty("QQ号")
-    val qq: Long,
-)
+    var qq: Long? = null
+
+    override fun toString(): String {
+        return "$name $stuId $qq"
+    }
+
+    companion object {
+        fun fromEntity(entity: StudentEntity): StudentInfo {
+            return StudentInfo().apply {
+                stuId = entity.stuId
+                name = entity.name
+                gender = entity.gender
+                department = entity.department
+                major = entity.major
+                grade = entity.grade
+                classId = entity.classId
+                qq = entity.qqNumber
+            }
+        }
+    }
+}
 
 data class StudentInfoOutput(
     @ExcelProperty("群名")
@@ -58,7 +85,7 @@ data class StudentInfoOutput(
 
 private const val CONFIG_PATH = "https://persecution-1301196908.cos.ap-chongqing.myqcloud.com/member_statistic/member-statistic-config.json"
 
-private lateinit var map: Map<Long, String>
+private lateinit var map: Map<String, Long>
 private val okHttpClient = OkHttpClient.Builder().build()
 private val gson = Gson()
 private val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
@@ -79,6 +106,7 @@ suspend fun Bot.setUpMemberStatistic() {
                 .doWrite(data)
         }
         sendEmail(file)
+        println(data)
         println("未入群人员名单已发送")
         // 发完就删
         file.delete()
@@ -110,9 +138,12 @@ private fun sendEmail(file: File) {
 }
 
 suspend fun Bot.editNameCard() {
-    map.mapNotNull { (k, v) -> (getGroup(k) ?: return@mapNotNull null) to v }
-        .associate { (k, v) -> k to readExcel(fetchFileStream(v)) }
-        .flatMap { (group, v) -> v.mapNotNull { stu -> stu to (group.getMember(stu.stuId) ?: return@mapNotNull null) } }
+    map.mapNotNull { (k, v) -> k to (getGroup(v) ?: return@mapNotNull null) }
+        .onEach { println(it) }
+        .associate { (k, v) -> v to selectDepartmentMembers(k) }
+        .onEach { println(it) }
+        .flatMap { (group, v) -> v.mapNotNull { stu -> stu to (group.getMember(stu.qq!!) ?: return@mapNotNull null) } }
+        .onEach { println(it) }
         .forEach { (stu, member) ->
             if (member.nameCard != "${stu.stuId}-${stu.name}") {
                 // 两秒改一个, 改太快会触发风控
@@ -128,25 +159,17 @@ suspend fun Bot.editNameCard() {
 }
 
 suspend fun Bot.exportMemberList(): List<StudentInfoOutput> {
-    return map.mapNotNull { (k, v) -> (getGroup(k) ?: return@mapNotNull null) to v }
-        .associate { (k, v) -> k to readExcel(fetchFileStream(v)) }
-        .mapValues { (group, v) -> v.filterNot { stu -> group.contains(stu.stuId) } }
-        .flatMap { (group, v) -> v.map { stu -> StudentInfoOutput(group.name, group.id, stu.name, stu.stuId, stu.qq) } }
+    return map.mapNotNull { (k, v) -> (getGroup(v) ?: return@mapNotNull null) to k }
+        .associate { (k, v) -> k to selectDepartmentMembers(v) }
+        .mapValues { (group, v) -> v.filterNot { stu -> group.contains(stu.qq!!) } }
+        .flatMap { (group, v) -> v.map { stu -> StudentInfoOutput(group.name, group.id, stu.name!!, stu.stuId!!, stu.qq!!) } }
 }
 
-suspend fun readExcel(inputStream: InputStream) = suspendCoroutine<List<StudentInfo>> {
-    EasyExcel.read(inputStream, StudentInfo::class.java, object : ReadListener<StudentInfo> {
-
-        private val cache = mutableListOf<StudentInfo>()
-
-        override fun invoke(data: StudentInfo?, context: AnalysisContext?) {
-            data?.let { cache.add(data) }
-        }
-
-        override fun doAfterAllAnalysed(context: AnalysisContext?) {
-            it.resume(cache)
-        }
-    }).doReadAll()
+suspend fun selectDepartmentMembers(depart: String): List<StudentInfo> {
+    return newSuspendedTransaction {
+        StudentEntity.find { TableStudents.department eq depart }
+            .map { StudentInfo.fromEntity(it) }
+    }
 }
 
 suspend fun Bot.launchWhenCommand(cmd: String, schedule: suspend () -> Unit) {
@@ -157,7 +180,7 @@ suspend fun Bot.launchWhenCommand(cmd: String, schedule: suspend () -> Unit) {
     }
 }
 
-suspend fun fetchConfig() = suspendCoroutine {
+suspend fun fetchConfig(): Map<String, Long> = suspendCoroutine {
     okHttpClient.newCall(
         Request.Builder()
             .url(CONFIG_PATH)
@@ -170,24 +193,8 @@ suspend fun fetchConfig() = suspendCoroutine {
         override fun onResponse(call: Call, response: Response) {
             it.resume(
                 response.body!!.string()
-                    .let { s -> gson.fromJson<Map<String, String>?>(s, object : TypeToken<Map<String, String>>() {}.type).mapKeys { (k, v) -> k.toLong() } }
+                    .let { s -> gson.fromJson(s, object : TypeToken<Map<String, Long>>() {}.type) }
             )
-        }
-    })
-}
-
-suspend fun fetchFileStream(url: String) = suspendCoroutine {
-    okHttpClient.newCall(
-        Request.Builder()
-            .url(url)
-            .build()
-    ).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: IOException) {
-            it.resumeWithException(e)
-        }
-
-        override fun onResponse(call: Call, response: Response) {
-            it.resume(response.body!!.byteStream())
         }
     })
 }

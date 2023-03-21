@@ -79,15 +79,17 @@ private fun sendEmail(file: File) {
 }
 
 // 整点唤醒
-private suspend fun launchWhen(hour: Int, func: suspend CoroutineScope.() -> Unit) = coroutineScope {
-    while (true) {
-        val calendar = Calendar.getInstance()
-        val date = calendar.time
-        if (date.hours == hour && date.date != lastDay) {
-            func()
-            lastDay = date.date
+private suspend fun Bot.launchWhen(hour: Int, func: suspend CoroutineScope.() -> Unit) {
+    launch {
+        while (true) {
+            val calendar = Calendar.getInstance()
+            val date = calendar.time
+            if (date.hours == hour && date.date != lastDay) {
+                func()
+                lastDay = date.date
+            }
+            delay(TimeUnit.MINUTES.toMillis(1))
         }
-        delay(TimeUnit.MINUTES.toMillis(1))
     }
 }
 
@@ -103,11 +105,10 @@ private suspend fun export(today: Boolean = false): File {
     // 制成excel表 并发邮件
     val data = statistics.mapNotNull { (id, count) ->
         bot.getGroup(targetGroup)?.getMember(id)?.let {
-            MemberInfo(it.nameCard, it.id, count)
+            MemberInfo(it.nameCard.takeIf { card -> card.isNotEmpty() } ?: it.nick, it.id, count)
         }
     }
     val pwd = Paths.get("").toAbsolutePath().toString()
-
     val file = File(pwd, "群聊发言统计 - ${simpleDateFormat.format(Date())}.xlsx")
     withContext(Dispatchers.IO) {
         file.createNewFile()

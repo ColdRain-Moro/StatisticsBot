@@ -44,3 +44,4 @@ bin/
 .env
 device.json
 member-statistic-config.json
+run.sh
