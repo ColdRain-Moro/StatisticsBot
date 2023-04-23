@@ -9,10 +9,11 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
+    maven("https://repo.mirai.mamoe.net/snapshots")
 }
 
 dependencies {
-    api(platform("net.mamoe:mirai-bom:2.14.0"))
+    api(platform("net.mamoe:mirai-bom:2.15.0-dev-65"))
     api("net.mamoe:mirai-core-api")
     runtimeOnly("net.mamoe:mirai-core")
 

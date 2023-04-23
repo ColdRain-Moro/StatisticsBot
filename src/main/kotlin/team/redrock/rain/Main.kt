@@ -28,7 +28,7 @@ lateinit var databasePassword: String
 
 val bot by lazy {
     BotFactory.newBot(qqNumber, qqPassword) {
-        protocol = BotConfiguration.MiraiProtocol.ANDROID_PHONE
+        protocol = BotConfiguration.MiraiProtocol.ANDROID_PAD
         fileBasedDeviceInfo("device.json")
     }
 }
@@ -51,8 +51,8 @@ fun configureEnv() {
 fun main(): Unit = runBlocking {
     configureEnv()
     DatabaseDriver.init(databaseUrl, databaseUser, databasePassword)
-    FixProtocolVersion.update()
-    println(FixProtocolVersion.info())
+//    FixProtocolVersion.update()
+//    println(FixProtocolVersion.info())
     bot.login()
     val timeZone = TimeZone.getTimeZone("Asia/Shanghai")
     TimeZone.setDefault(timeZone)

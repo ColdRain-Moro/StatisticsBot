@@ -73,6 +73,8 @@ class StudentInfo {
 data class StudentInfoOutput(
     @ExcelProperty("群名")
     val group: String,
+    @ExcelProperty("学院")
+    val depart: String,
     @ExcelProperty("群号")
     val groupId: Long,
     @ExcelProperty("姓名")
@@ -162,7 +164,7 @@ suspend fun Bot.exportMemberList(): List<StudentInfoOutput> {
     return map.mapNotNull { (k, v) -> (getGroup(v) ?: return@mapNotNull null) to k }
         .associate { (k, v) -> k to selectDepartmentMembers(v) }
         .mapValues { (group, v) -> v.filterNot { stu -> group.contains(stu.qq!!) } }
-        .flatMap { (group, v) -> v.map { stu -> StudentInfoOutput(group.name, group.id, stu.name!!, stu.stuId!!, stu.qq!!) } }
+        .flatMap { (group, v) -> v.map { stu -> StudentInfoOutput(group.name, stu.department!!, group.id, stu.name!!, stu.stuId!!, stu.qq!!) } }
 }
 
 suspend fun selectDepartmentMembers(depart: String): List<StudentInfo> {
