@@ -13,7 +13,7 @@ repositories {
 }
 
 dependencies {
-    api(platform("net.mamoe:mirai-bom:2.15.0-dev-65"))
+    api(platform("net.mamoe:mirai-bom:2.15.0-dev-105"))
     api("net.mamoe:mirai-core-api")
     runtimeOnly("net.mamoe:mirai-core")
 
@@ -30,6 +30,8 @@ dependencies {
     implementation("org.jetbrains.exposed", "exposed-dao", "0.37.3")
     implementation("org.jetbrains.exposed", "exposed-jdbc", "0.37.3")
     implementation("mysql:mysql-connector-java:8.0.29")
+
+    implementation("org.asynchttpclient:async-http-client:2.12.3")
 
     testImplementation(kotlin("test"))
 }

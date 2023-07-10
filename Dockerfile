@@ -10,10 +10,12 @@ COPY ./update_device.py /app/update_device.py
 
 COPY ./start.sh /app/start.sh
 
+COPY ./KFCFactory.json /app/KFCFactory.json
+
 WORKDIR /app
 
 RUN chmod +x start.sh
 
-CMD ["bash", "./start.sh"]
+CMD ["./start.sh"]
 
 EXPOSE 8080

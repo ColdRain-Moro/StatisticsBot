@@ -1,16 +1,18 @@
 package team.redrock.rain
 
-import com.alibaba.excel.EasyExcel
 import io.github.cdimascio.dotenv.Dotenv
 import kotlinx.coroutines.*
 import net.mamoe.mirai.BotFactory
+import net.mamoe.mirai.auth.BotAuthorization
 import net.mamoe.mirai.utils.BotConfiguration
 import team.redrock.rain.database.DatabaseDriver
 import team.redrock.rain.module.chat.setupChatStatistic
 import team.redrock.rain.module.member.setUpMemberStatistic
+import team.redrock.rain.module.notify.setupNotify
 import xyz.cssxsh.mirai.tool.FixProtocolVersion
-import java.io.File
-import java.nio.file.Paths
+import xyz.cssxsh.mirai.tool.KFCFactory
+import xyz.cssxsh.mirai.tool.TLV544Provider
+import xyz.cssxsh.mirai.tool.ViVo50
 import java.util.*
 import kotlin.properties.Delegates
 
@@ -51,11 +53,14 @@ fun configureEnv() {
 fun main(): Unit = runBlocking {
     configureEnv()
     DatabaseDriver.init(databaseUrl, databaseUser, databasePassword)
-//    FixProtocolVersion.update()
-//    println(FixProtocolVersion.info())
+    FixProtocolVersion.update()
+    KFCFactory.install()
+
+    println(FixProtocolVersion.info())
     bot.login()
     val timeZone = TimeZone.getTimeZone("Asia/Shanghai")
     TimeZone.setDefault(timeZone)
+    setupNotify(bot)
     bot.setupChatStatistic()
     bot.setUpMemberStatistic()
 }
